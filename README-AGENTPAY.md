@@ -79,24 +79,46 @@ Gas is tQDAY, about 1 gwei; the deploy costs well under 0.01 tQDAY. Aevum runs *
 
 ### Demo an agent session
 
+Against Aevum testnet:
+
 ```bash
 cp examples/.env.example examples/.env    # AGENT_PAY_ADDRESS, MERCHANT_ADDRESS, PAYER_KEY, AGENT_KEY
 pnpm example agent-pay
 ```
 
-Output shape:
+Or entirely offline against the local fork, which is how this was first run (no faucet, no funds):
+
+```bash
+make fork &                                          # Aevum state on 127.0.0.1:8555, chain 440050
+make deploy-agentpay-fork                            # prints the AgentPay address
+cast wallet new > .secrets/payer.txt                 # throwaway wallets
+cast wallet new > .secrets/agent.txt
+make deal TO=<payer address> AMOUNT=50               # fork-only: tUSD8 + tQDAY for gas
+make deal TO=<agent address> AMOUNT=1
+python3 scripts/make-example-env.py <AgentPay address>   # writes examples/.env (600), keys never on a command line
+pnpm example agent-pay
+```
+
+Real output from that run:
 
 ```
 1) payer opens the session and approves the budget
-   openSession 0x…explorer-test.qday.info/tx/0x…
+   approve     0x9a41…7a24
+   openSession 0xce15…7a35
 2) the agent works through the invoices
    PAID     2 tUSD8 - inside the cap
    PAID     3 tUSD8 - inside the cap
    REFUSED  4 tUSD8 - above the per-payment cap -> PerPaymentCapExceeded
    REFUSED  invoice-1 again - replay -> OrderAlreadyPaid
 3) payer revokes the session
+   revoke      0x1a92…bac9
    REFUSED  after revoke -> SessionIsRevoked
+summary
+   session remaining 5 tUSD8
 ```
+
+Three real reverts, each with its selector checked against the contract
+(`PerPaymentCapExceeded 0xf636018b`, `OrderAlreadyPaid 0x4e64befa`, `SessionIsRevoked 0x524d38ba`).
 
 ## Deployed addresses
 

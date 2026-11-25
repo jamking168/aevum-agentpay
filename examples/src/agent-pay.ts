@@ -17,7 +17,17 @@
  *   5. the payer revokes the session; the next payment is refused
  * Every refusal is a revert from the contract, not a rule the agent chose to follow.
  */
-import { createWalletClient, http, keccak256, parseAbi, parseUnits, toHex, type Address, type Hex } from "viem";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  createWalletClient,
+  http,
+  keccak256,
+  parseAbi,
+  parseUnits,
+  toHex,
+  type Hex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { TUSD8_ADDRESS, erc20Abi, txUrl } from "@aevum-kit/aevum";
 import { connect, requiredAddress, requiredKey } from "./env";
@@ -29,6 +39,15 @@ const agentPayAbi = parseAbi([
   "function remaining(bytes32 sessionId) view returns (uint256)",
   "function isOrderPaid(bytes32 sessionId, bytes32 orderId) view returns (bool)",
   "event Paid(bytes32 indexed sessionId, bytes32 indexed orderId, address indexed agent, address payer, address merchant, uint256 amount, uint256 spentAfter)",
+  // Custom errors, so viem decodes a refusal into a name instead of a bare selector.
+  "error BudgetExceeded(uint256 budget, uint256 spent, uint256 amount)",
+  "error PerPaymentCapExceeded(uint256 cap, uint256 amount)",
+  "error OrderAlreadyPaid(bytes32 sessionId, bytes32 orderId)",
+  "error SessionIsRevoked()",
+  "error SessionExpired(uint64 expiry)",
+  "error MerchantNotAllowed(address merchant)",
+  "error NotAgent()",
+  "error SessionUnknown(bytes32 sessionId)",
 ]);
 
 const { client, chain, rpcUrl } = await connect();
@@ -128,10 +147,16 @@ console.log("\nsummary");
 console.log("   session remaining", Number(left) / 1e6, "tUSD8");
 console.log("   every refusal above came from the contract, not from this script");
 
+/// Pulls the custom error name out of a viem revert, e.g. "PerPaymentCapExceeded".
 function shortReason(e: unknown): string {
+  if (e instanceof BaseError) {
+    const revert = e.walk((err) => err instanceof ContractFunctionRevertedError);
+    if (revert instanceof ContractFunctionRevertedError) {
+      if (revert.data?.errorName) return revert.data.errorName;
+      return revert.shortMessage.slice(0, 120);
+    }
+  }
   const s = e instanceof Error ? e.message : String(e);
-  const m = s.match(
-    /(BudgetExceeded|PerPaymentCapExceeded|OrderAlreadyPaid|SessionIsRevoked|SessionExpired|MerchantNotAllowed|NotAgent)/,
-  );
+  const m = s.match(/(BudgetExceeded|PerPaymentCapExceeded|OrderAlreadyPaid|SessionIsRevoked|SessionExpired|MerchantNotAllowed|NotAgent)/);
   return m ? m[1] : s.split("\n")[0].slice(0, 120);
 }
