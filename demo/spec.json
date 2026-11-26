@@ -1,0 +1,45 @@
+{
+  "page": "demo.html",
+  "out": "agentpay",
+  "display": ":99",
+  "width": 1440,
+  "height": 900,
+  "voice": "en-US-GuyNeural",
+  "rate": "+12%",
+  "hold": 4.0,
+  "pad_tail": 0.5,
+  "scenes": [
+    {
+      "id": "s1",
+      "narration": "This is AgentPay. It gives an AI agent a spending session on Aevum, with five limits enforced on chain: a total budget, a per payment cap, an expiry, an instant revoke, and one payment per order."
+    },
+    {
+      "id": "s2",
+      "narration": "Everything in this video came from a real run. The chain is a fork of Aevum testnet, chain forty four thousand and fifty, and the token is the live tUSD8 contract, not a mock. The agent payment contract deployed at the address shown here."
+    },
+    {
+      "id": "s3",
+      "narration": "First the payer approves the budget and opens a session with a ten tUSD8 budget, a four tUSD8 cap per payment, and a one day expiry. Two transactions, both real, both on screen."
+    },
+    {
+      "id": "s4",
+      "narration": "Then the agent pays two invoices, two tUSD8 and three tUSD8, each inside the cap. The agent signs and sends these itself. It never holds funds, it only holds the right to spend inside the session, and the money goes straight from the payer to the merchant."
+    },
+    {
+      "id": "s5",
+      "narration": "Then three payments are refused, and the refusals come from the contract, not from the script. Four tUSD8 is above the per payment cap. Replaying invoice one is rejected as already paid. And after the payer revokes the session, every further payment fails."
+    },
+    {
+      "id": "s6",
+      "narration": "Accounting stays exact: five of the ten tUSD8 remain. The repository carries thirty two unit tests, five fork tests against the live token, and a relay path where the payer signs off chain and anyone can submit the payment."
+    }
+  ],
+  "subtitles": [
+    {"scene": "s1", "start": 0.3, "end": 5.4, "lines": ["AgentPay — session-scoped spending controls", "for AI agents paying merchants on Aevum"]},
+    {"scene": "s2", "start": 0.3, "end": 5.6, "lines": ["Real run on a fork of Aevum testnet (chain 440050)", "token = live tUSD8, not a mock"]},
+    {"scene": "s3", "start": 0.3, "end": 5.0, "lines": ["Payer approves 10 tUSD8 and opens a session", "cap 4 tUSD8 per payment · 1 day expiry"]},
+    {"scene": "s4", "start": 0.3, "end": 6.0, "lines": ["Agent pays 2 + 3 tUSD8 itself", "payer to merchant direct · the contract holds nothing"]},
+    {"scene": "s5", "start": 0.3, "end": 7.0, "lines": ["3 refusals, all from the contract:", "PerPaymentCapExceeded · OrderAlreadyPaid · SessionIsRevoked"]},
+    {"scene": "s6", "start": 0.3, "end": 6.0, "lines": ["32 unit tests · 5 fork tests · MIT", "github.com/jamking168/aevum-agentpay"]}
+  ]
+}

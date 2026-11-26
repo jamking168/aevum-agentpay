@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgentPay demo</title>
+<style>
+  :root { --bg:#0d1117; --fg:#e6edf3; --dim:#8b949e; --ok:#3fb950; --bad:#f85149; --acc:#58a6ff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+              font-family:"DejaVu Sans Mono","Liberation Mono",monospace; overflow:hidden; }
+  .scene { position:absolute; inset:0; padding:64px 72px 150px; opacity:0; transition:opacity .28s ease;
+           display:flex; flex-direction:column; justify-content:center; gap:18px; }
+  .scene.on { opacity:1; }
+  h1 { font-size:44px; margin:0 0 6px; letter-spacing:-.5px; }
+  h2 { font-size:26px; margin:0 0 14px; color:var(--acc); font-weight:600; }
+  .sub { font-size:20px; color:var(--dim); line-height:1.5; }
+  pre { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:22px 24px;
+        font-size:17px; line-height:1.75; margin:0; overflow:hidden; white-space:pre-wrap; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .dim { color:var(--dim); } .acc { color:var(--acc); }
+  .row { display:flex; gap:14px; align-items:baseline; }
+  .k { color:var(--dim); min-width:150px; display:inline-block; }
+  .hash { color:var(--acc); word-break:normal; white-space:nowrap; }
+  .foot { position:absolute; left:72px; right:72px; bottom:56px; font-size:16px; color:var(--dim);
+          display:flex; justify-content:space-between; border-top:1px solid #21262d; padding-top:12px; }
+  .bar { position:absolute; left:0; bottom:0; height:3px; background:var(--acc); width:0; }
+  .tag { display:inline-block; font-size:15px; padding:3px 10px; border:1px solid #30363d; border-radius:99px;
+         color:var(--dim); }
+  .slate { position:fixed; inset:0; background:#ff00ff; z-index:9999; }
+</style>
+</head>
+<body>
+<div class="slate" id="slate"></div>
+
+<section class="scene" id="s1">
+  <h1>AgentPay</h1>
+  <div class="sub">Session-scoped spending controls for an AI agent paying merchants on Aevum.</div>
+  <pre><span class="dim">five limits, all enforced on chain</span>
+<span class="acc">budget</span>        total the agent may ever spend
+<span class="acc">perPaymentCap</span> largest single invoice
+<span class="acc">expiry</span>        session dies on its own
+<span class="acc">revoke</span>        payer can stop it instantly
+<span class="acc">idempotency</span>   one payment per order id</pre>
+  <div class="foot"><span>Solidity + Foundry · Aevum testnet (chain 44005)</span><span>1 / 6</span></div>
+</section>
+
+<section class="scene" id="s2">
+  <h2>Real run, real token</h2>
+  <pre><span class="k">chain</span>      <span class="ok">440050</span>   <span class="dim">fork of Aevum testnet</span>
+<span class="k">tUSD8</span>      <span class="hash">0x456569838f1d43009A91ebA4263147Afd7233483</span>
+<span class="k">AgentPay</span>   <span class="hash">0x453A26F49bBD786220b17d9DC786DB87809e71fa</span>
+<span class="k">payer</span>      <span class="hash">0xf09bd133A296a11EEEa08454C3fa132B1B314F4D</span>
+<span class="k">agent</span>      <span class="hash">0x97C89D1bCfA55D49F5b43aF8F59DFbB78007B02f</span></pre>
+  <div class="sub">The token is the live tUSD8 contract, not a mock — the fork copies real testnet state.</div>
+  <div class="foot"><span>make deploy-agentpay-fork</span><span>2 / 6</span></div>
+</section>
+
+<section class="scene" id="s3">
+  <h2>1 · the payer opens the session</h2>
+  <pre><span class="k">approve</span>     <span class="hash">0x0b6b8f01884ac66487a54847d06067a3fa829815d4c80e2a9f1934135b06f3d7</span>
+<span class="k">openSession</span> <span class="hash">0x48e7f08dac0124a2627ca5df4351d16f596d09e48a9047b4d738991b3da02dc7</span>
+<span class="k">session</span>     <span class="hash">0x26803a3f5a4c8cdfac0aae315ecefa1ef5b57a790e9a6803eeadc83c92a76f2a</span>
+<span class="k">budget</span>      10 tUSD8
+<span class="k">cap</span>         4 tUSD8 per payment</pre>
+  <div class="sub">Money never sits in the contract: the payer approves the token and pays the merchant directly.</div>
+  <div class="foot"><span>examples/src/agent-pay.ts</span><span>3 / 6</span></div>
+</section>
+
+<section class="scene" id="s4">
+  <h2>2 · the agent pays the invoices</h2>
+  <pre><span class="ok">PAID</span>  2 tUSD8 — inside the cap
+      <span class="hash">0xdcd40e75a9d062443d2a7f0866e4af02291853b7616e72da4a05972d49cd04b5</span>
+<span class="ok">PAID</span>  3 tUSD8 — inside the cap
+      <span class="hash">0x21744af52a68ba8fff13ecfbdbcdcd2a525f71c964e86a4800374cc11aab2b54</span></pre>
+  <div class="sub">The agent signs and sends these itself — it holds no funds, only the right to spend inside the session.</div>
+  <div class="foot"><span>both hashes are from this run</span><span>4 / 6</span></div>
+</section>
+
+<section class="scene" id="s5">
+  <h2>3 · three payments refused by the contract</h2>
+  <pre><span class="bad">REFUSED</span>  4 tUSD8 — above the per-payment cap   <span class="dim">→ PerPaymentCapExceeded</span>
+<span class="bad">REFUSED</span>  invoice-1 again — replay            <span class="dim">→ OrderAlreadyPaid</span>
+<span class="bad">REFUSED</span>  after the payer revokes            <span class="dim">→ SessionIsRevoked</span>
+<span class="k">revoke</span>    <span class="hash">0xff00bb89e57617299070d2d9c5328ad3c833a221aba3ea4b9d72ec8d1553ea49</span></pre>
+  <div class="sub">Every refusal is a contract revert with its own error, not a check in the client.</div>
+  <div class="foot"><span>exit code 0 · session remaining 5 tUSD8</span><span>5 / 6</span></div>
+</section>
+
+<section class="scene" id="s6">
+  <h2>What is in the repository</h2>
+  <pre><span class="ok">32</span> unit tests   <span class="ok">5</span> fork tests against live tUSD8   <span class="ok">6/6</span> Shanghai bytecode checks
+<span class="k">repo</span>   github.com/jamking168/aevum-agentpay      <span class="dim">MIT</span>
+<span class="k">docs</span>   README-AGENTPAY.md — five gates, both payment paths
+<span class="k">relay</span>  EIP-3009 payWithAuthorization: payer signs, anyone submits</pre>
+  <div class="sub">Built on the Aevum Starter Kit. The relay path lets a payer authorise a payment offline while a relayer pays the gas.</div>
+  <div class="foot"><span>AgentPay · Aevum Builder Challenge #1 · Native AI Assistants</span><span>6 / 6</span></div>
+</section>
+
+<div class="bar" id="bar"></div>
+
+<script>
+  // The build script rewrites these two lines from measured narration durations.
+  const SCENES = [
+  ['s1', 4000, 15918],
+  ['s2', 16068, 30026],
+  ['s3', 30176, 41638],
+  ['s4', 41788, 56826],
+  ['s5', 56976, 73046],
+  ['s6', 73196, 86074],
+];
+  const TOTAL = 86224;
+  const GATE = 4000;   // magenta slate, then t=0 of the narration
+
+  function show(id) {
+    document.querySelectorAll('.scene').forEach(el => el.classList.toggle('on', el.id === id));
+  }
+  setTimeout(() => {
+    document.getElementById('slate').remove();
+    const t0 = performance.now();
+    SCENES.forEach(([id, start, end], i) => {
+      setTimeout(() => show(id), start);
+      if (i === SCENES.length - 1) setTimeout(() => show(id), end);
+    });
+    (function tick() {
+      const p = Math.min(1, (performance.now() - t0) / TOTAL);
+      document.getElementById('bar').style.width = (p * 100) + '%';
+      if (p < 1) requestAnimationFrame(tick);
+    })();
+  }, GATE);
+</script>
+</body>
+</html>

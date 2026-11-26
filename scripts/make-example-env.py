@@ -29,7 +29,7 @@ def read_wallet(name: str) -> tuple[str, str]:
 def main() -> None:
     agent_pay = sys.argv[1]
     payer_addr, payer_key = read_wallet("payer")
-    _, agent_key = read_wallet("agent")
+    agent_addr, agent_key = read_wallet("agent")
     merchant_addr, _ = read_wallet("test-wallet")
 
     lines = [
@@ -48,6 +48,7 @@ def main() -> None:
 
     print(f"wrote {ENV_PATH} (600)")
     print(f"  payer    {payer_addr}")
+    print(f"  agent    {agent_addr}")
     print(f"  merchant {merchant_addr}")
     print(f"  agentpay {agent_pay}")
 
